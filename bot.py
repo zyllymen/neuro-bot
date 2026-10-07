@@ -19,7 +19,7 @@ def ask_groq(user_message: str) -> str:
         "Content-Type": "application/json"
     }
     data = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "qwen/qwen3.8-27b",
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message}
@@ -36,18 +36,14 @@ def ask_groq(user_message: str) -> str:
         )
         
         print(f"Groq status: {response.status_code}")
-        print(f"Groq response: {response.text[:500]}")
         
         if response.status_code != 200:
-            return f"Ошибка Groq API: {response.status_code}"
+            return f"Ошибка Groq: {response.status_code} - {response.text[:200]}"
         
         result = response.json()
         
-        if "choices" not in result:
-            return f"Неожиданный ответ: {json.dumps(result, ensure_ascii=False)[:200]}"
-        
-        if len(result["choices"]) == 0:
-            return "Groq вернул пустой ответ"
+        if "choices" not in result or len(result["choices"]) == 0:
+            return f"Пустой ответ от Groq: {json.dumps(result, ensure_ascii=False)[:200]}"
         
         return result["choices"][0]["message"]["content"]
         
@@ -58,7 +54,7 @@ def ask_groq(user_message: str) -> str:
 
 @bot.message_handler(commands=['start'])
 def cmd_start(message):
-    bot.reply_to(message, "Привет! Я крутая нейросеть на базе Llama 3. Задай мне любой вопрос!")
+    bot.reply_to(message, "Привет! Я нейросеть Qwen 3 на базе 27B параметров. Задай мне любой вопрос!")
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
