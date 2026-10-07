@@ -1,19 +1,15 @@
-import asyncio
-import logging
 import os
 import httpx
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.filters import Command
+import telebot
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-bot = Bot(token=TELEGRAM_TOKEN)
-dp = Dispatcher()
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 SYSTEM_PROMPT = "Ты — циничный, но очень умный и полезный ИИ-ассистент. Отвечай кратко, по делу, иногда можешь добавить сарказма, но всегда помогай пользователю."
 
-async def ask_groq(user_message: str) -> str:
+def ask_groq(user_message: str) -> str:
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
@@ -27,33 +23,27 @@ async def ask_groq(user_message: str) -> str:
         "temperature": 0.7
     }
     
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=30.0
-        )
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
+    response = httpx.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers=headers,
+        json=data,
+        timeout=30.0
+    )
+    result = response.json()
+    return result["choices"][0]["message"]["content"]
 
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    await message.answer("Привет! Я крутая нейросеть на базе Llama 3. Задай мне любой вопрос!")
+@bot.message_handler(commands=['start'])
+def cmd_start(message):
+    bot.reply_to(message, "Привет! Я крутая нейросеть на базе Llama 3. Задай мне любой вопрос!")
 
-@dp.message(F.text)
-async def handle_message(message: types.Message):
-    await bot.send_chat_action(message.chat.id, "typing")
-    
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    bot.send_chat_action(message.chat.id, "typing")
     try:
-        response = await ask_groq(message.text)
-        await message.answer(response)
+        response = ask_groq(message.text)
+        bot.reply_to(message, response)
     except Exception as e:
-        await message.answer(f"Ошибка при обращении к мозгам: {e}")
+        bot.reply_to(message, f"Ошибка при обращении к мозгам: {e}")
 
-async def main():
-    logging.basicConfig(level=logging.INFO)
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+print("Бот запущен!")
+bot.infinity_polling()
