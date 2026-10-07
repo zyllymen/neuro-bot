@@ -19,7 +19,7 @@ def ask_groq(user_message: str) -> str:
         "Content-Type": "application/json"
     }
     data = {
-        "model": "llama3-8b-8192",
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message}
@@ -35,18 +35,16 @@ def ask_groq(user_message: str) -> str:
             timeout=30.0
         )
         
-        # Логируем ответ для отладки
-        print(f"Groq response status: {response.status_code}")
+        print(f"Groq status: {response.status_code}")
         print(f"Groq response: {response.text[:500]}")
         
         if response.status_code != 200:
-            return f"Ошибка Groq API: {response.status_code} - {response.text}"
+            return f"Ошибка Groq API: {response.status_code}"
         
         result = response.json()
         
-        # Проверяем структуру ответа
         if "choices" not in result:
-            return f"Неожиданный формат ответа: {json.dumps(result, ensure_ascii=False)[:200]}"
+            return f"Неожиданный ответ: {json.dumps(result, ensure_ascii=False)[:200]}"
         
         if len(result["choices"]) == 0:
             return "Groq вернул пустой ответ"
@@ -54,9 +52,9 @@ def ask_groq(user_message: str) -> str:
         return result["choices"][0]["message"]["content"]
         
     except httpx.TimeoutException:
-        return "Превышено время ожидания ответа от Groq"
+        return "Превышено время ожидания"
     except Exception as e:
-        return f"Ошибка при запросе к Groq: {str(e)}"
+        return f"Ошибка: {str(e)}"
 
 @bot.message_handler(commands=['start'])
 def cmd_start(message):
