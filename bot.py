@@ -1,13 +1,13 @@
 import os
 import httpx
-from flask import Flask, request, jsonify
+from flask import Flask, request
 import telebot
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 app = Flask(__name__)
-bot = telebot.TeleBot(TELEGRAM_TOKEN)
+bot = telebot.TeleBot(TELEGRAM_TOKEN, threaded=False)
 
 SYSTEM_PROMPT = "Ты — циничный, но очень умный и полезный ИИ-ассистент. Отвечай кратко, по делу, иногда можешь добавить сарказма, но всегда помогай пользователю."
 
@@ -57,9 +57,4 @@ def home():
     return 'Бот работает!'
 
 if __name__ == '__main__':
-    # Устанавливаем webhook при запуске
-    webhook_url = f"https://neuro-bot-sdko.onrender.com/{TELEGRAM_TOKEN}"
-    bot.remove_webhook()
-    bot.set_webhook(url=webhook_url)
-    print(f"Webhook установлен: {webhook_url}")
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
