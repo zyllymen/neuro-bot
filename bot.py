@@ -1,7 +1,8 @@
 import os
 import httpx
-from flask import Flask, request
 import telebot
+from flask import Flask
+import threading
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -46,15 +47,24 @@ def handle_message(message):
     except Exception as e:
         bot.reply_to(message, f"Ошибка: {e}")
 
-@app.route('/' + TELEGRAM_TOKEN, methods=['POST'])
-def webhook():
-    update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
-    bot.process_new_updates([update])
-    return '', 200
-
+# Flask маршруты (для UptimeRobot)
 @app.route('/')
 def home():
     return 'Бот работает!'
 
+@app.route('/health')
+def health():
+    return 'OK'
+
+# Запуск бота в отдельном потоке
+def run_bot():
+    print("Бот запущен!")
+    bot.infinity_polling()
+
 if __name__ == '__main__':
+    # Запускаем бота в фоновом потоке
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    
+    # Запускаем Flask сервер
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
