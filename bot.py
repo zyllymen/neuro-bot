@@ -3,6 +3,7 @@ import httpx
 import telebot
 from flask import Flask
 import threading
+import json
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -26,14 +27,36 @@ def ask_groq(user_message: str) -> str:
         "temperature": 0.7
     }
     
-    response = httpx.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        headers=headers,
-        json=data,
-        timeout=30.0
-    )
-    result = response.json()
-    return result["choices"][0]["message"]["content"]
+    try:
+        response = httpx.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30.0
+        )
+        
+        # Логируем ответ для отладки
+        print(f"Groq response status: {response.status_code}")
+        print(f"Groq response: {response.text[:500]}")
+        
+        if response.status_code != 200:
+            return f"Ошибка Groq API: {response.status_code} - {response.text}"
+        
+        result = response.json()
+        
+        # Проверяем структуру ответа
+        if "choices" not in result:
+            return f"Неожиданный формат ответа: {json.dumps(result, ensure_ascii=False)[:200]}"
+        
+        if len(result["choices"]) == 0:
+            return "Groq вернул пустой ответ"
+        
+        return result["choices"][0]["message"]["content"]
+        
+    except httpx.TimeoutException:
+        return "Превышено время ожидания ответа от Groq"
+    except Exception as e:
+        return f"Ошибка при запросе к Groq: {str(e)}"
 
 @bot.message_handler(commands=['start'])
 def cmd_start(message):
@@ -45,9 +68,8 @@ def handle_message(message):
         response = ask_groq(message.text)
         bot.reply_to(message, response)
     except Exception as e:
-        bot.reply_to(message, f"Ошибка: {e}")
+        bot.reply_to(message, f"Критическая ошибка: {str(e)}")
 
-# Flask маршруты (для UptimeRobot)
 @app.route('/')
 def home():
     return 'Бот работает!'
@@ -56,15 +78,11 @@ def home():
 def health():
     return 'OK'
 
-# Запуск бота в отдельном потоке
 def run_bot():
     print("Бот запущен!")
     bot.infinity_polling()
 
 if __name__ == '__main__':
-    # Запускаем бота в фоновом потоке
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
-    
-    # Запускаем Flask сервер
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
