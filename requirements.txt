@@ -1,5 +1,6 @@
-aiogram==3.31.0
-aiosqlite==0.22.1
-httpx==0.28.1
-aiohttp==3.12.6
-ddgs==9.16.0
+aiogram>=3.0.0
+aiosqlite
+httpx
+aiohttp
+duckduckgo-search==9.16.0
+
